@@ -1,0 +1,153 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/3/syntax.html
+name: "Libretto"
+file_extensions:  
+  - ltt  
+variables:
+  op_s: '[\+\-\/\*]|div|mod'
+  name: '[\w_-]+[\w\d_-]*|`.*`'
+
+scope: source.ltt
+contexts:  
+  main:  
+    - include: comments
+    - include: constants
+    - include: lib
+    - include: scope:libretto.xml
+    - match: '(\buse\b)\s*([/\w\d]*)'
+      captures:
+        1: keyword
+        2: constant
+    - match: '{|={'
+      scope: punctuation
+      push: 
+      - include: block
+      - match: '}'
+        scope: punctuation
+        pop: true      
+    - match: '\b(def|this)\b'
+      scope: keyword
+    - match: '\b(struct|Int|String|Any)\b'
+      scope: storage.type
+    - match: '(?<=:)[\s]*({{name}})'
+      scope: storage.type
+    - match: '[\w_-]+(\?)?=d'
+      scope: storage.type
+    - match: '(({{name}})\s+)?({{name}})(?=\s*[(:={])'
+      captures:
+        2: storage.type
+        3: entity.name.type
+    - match: '#m'  
+      scope: constant
+  comments:
+    - match: ///
+      scope: punctuation.definition.comment.source.cs
+      push:
+        - meta_scope: comment.block.documentation.source.cs
+        - match: $\n?
+          scope: punctuation.definition.comment.source.cs
+          pop: true
+        - include: scope:text.xml
+    - match: /\*
+      scope: punctuation.definition.comment.source.cs
+      push:
+        - meta_scope: comment.block.source.cs
+        - match: \*/\n?
+          scope: punctuation.definition.comment.source.cs
+          pop: true
+    - match: //
+      scope: punctuation.definition.comment.source.cs
+      push:
+        - meta_scope: comment.line.double-slash.source.cs
+        - match: $\n?
+          pop: true
+  block:
+    - include: comments
+    - include: constants
+    - include: lib
+    - include: scope:libretto.xml
+    - match: '\b(case|var|fix|this|unit|if|else)\b'
+      scope: keyword
+    - match: '{'
+      scope: punctuation
+      push: block
+    - match: '}'
+      scope: punctuation
+      pop: true
+  
+  constants:
+    - match: (<=|==|>=|div|*|mod|\+|-|>|=>|<\s)
+      scope: punctuation
+    - match: '<<'
+      scope: punctuation
+      push:
+        - match: '([#%])({)'
+          captures:
+            1: constant.numeric
+            2: punctuation
+          push: block  
+        - match: '(>>)([\!]?)'  
+          captures:
+            1: punctuation
+            2: constant.numeric
+          pop: true
+        - match: '.'
+          scope: string
+    # - match: '"'
+    #   scope: punctuation
+    #   push:
+    #     - match: '([#%])({)'
+    #       captures:
+    #         1: constant.numeric
+    #         2: punctuation
+    #       push: block  
+    #     - match: '(")([\!]?)'  
+    #       captures:
+    #         1: punctuation
+    #         2: constant.numeric
+    #       pop: true
+    #     - match: '.'
+    #       scope: string
+    - match: '\b[-]?[0-9\.]*\b'
+      scope: constant.numeric
+
+    - match: "'"
+      scope: punctuation
+      push:
+        - match: '.(?=[^\w\d])|\s'
+          scope: string
+          pop: true
+        - match: '.'
+          scope: string
+          
+    - match: '(")(?=(#{.*}|[^"\n])*"[!])'
+      scope: constant.numeric
+      push: 
+        - match: '([#%])({)'
+          captures:
+            1: constant.numeric
+            2: punctuation
+          push: block  
+        - match: '"'
+          scope: constant.numeric
+          pop: true
+        - include: string         
+        - match: '.'
+          scope: string
+    - match: '(")([^"\n]*)(")(?![!])'
+      captures:
+        1: punctuation
+        2: string
+        3: punctuation
+
+
+  function:
+    - match: '{{name}}'
+      pop: true
+  values:
+    - include: constants
+
+  lib:
+    - match: '({{name}})*\/'
+      scope: comment

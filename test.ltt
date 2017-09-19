@@ -1,5 +1,18 @@
+def inc(x) = x+1
+
+def buildXml = 
+	<message>Hellow world!</message>
+
+def buildXml(x) = x.
+	<message attr=#{ if($.?Real) "real" }>#{$}</message>
+
+def buildXml(x:Int*) = x.
+	<message>#{inc($)}</message>
+
+
 def main = {
-	123
-	"asdwqdasd"
-	"asdqwdads#{321321}"!
+	println: buildXml
+	println: buildXml(3.5)
+	println: buildXml("asd")
+	buildXml:(1,2,5,7)
 }

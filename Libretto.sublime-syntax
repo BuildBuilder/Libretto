@@ -1,6 +1,7 @@
 %YAML 1.2
 ---
 # http://www.sublimetext.com/docs/3/syntax.html
+
 name: "Libretto"
 file_extensions:  
   - ltt  
@@ -11,6 +12,7 @@ variables:
   qualified_name: '(?:([[:alpha:]_][[:alnum:]_.-]*)(:))?([[:alpha:]_][[:alnum:]_.-]*)'
 
 scope: source.ltt
+
 contexts:  
   main:  
     - include: comments
@@ -69,6 +71,7 @@ contexts:
         - match: $\n?
           pop: true
   block:
+    - meta_scope: source.ltt 
     - include: comments
     - include: constants
     - include: lib
@@ -85,10 +88,34 @@ contexts:
   constants:
     - match: (<=|==|>=|\bdiv\b|\*|\bmod\b|\+|-|>|=>|<\s)
       scope: punctuation
+    - match: 's"'
+      scope: constant.numeric
+      push:
+        - match: (\\n|\\r|\\b|\\f|\\t|\\\\|\\"|\\u[\da-fA-F]{4}|\\u{\d*})
+          scope: constant.character.escape
+        - match: '#{'
+          scope: punctuation
+          push: block
+        - match: '"'  
+          scope: constant.numeric
+          pop: true
+        - match: '[^"#\\]*'
+          scope: string
+    - match: 's<<'
+      scope: constant.numeric
+      push:
+        - match: '#{'
+          scope: punctuation
+          push: block
+        - match: '>>'  
+          scope: constant.numeric
+          pop: true
+        - match: '[^>#]*'
+          scope: string
     - match: '<<'
       scope: punctuation
       push:
-        - match: '([#%])({)'
+        - match: '#{'
           captures:
             1: constant.numeric
             2: punctuation
@@ -96,36 +123,38 @@ contexts:
         - match: '(>>)([\!]?)'  
           captures:
             1: punctuation
-            2: constant.numeric
+            2: invalid.deprecated
           pop: true
         - match: '.'
           scope: string
-    - match: '\b[-]?[0-9\.]*\b'
+
+    - match: \b-?\d(\d|[_\d])*(.\d(\d|[_\d])*)?([eE]\d(\d|[_\d])*)?\b
+      scope: constant.numeric
+    - match: \b0x[\da-fA-F]+\b
+      scope: constant.numeric
+    - match: \b0b[01]+\b
       scope: constant.numeric
 
-    - match: "'"
-      scope: punctuation
-      push:
-        - match: '.(?=[^\w\d])|\s'
-          scope: string
-          pop: true
-        - match: '.'
-          scope: string
+    - match: \'([\w\d]*)(\')?
+      scope: constant.numeric
+      captures:
+        1: string
+        2: invalid
           
     - match: '(")(?=(#{.*}|[^"\n])*"[!])'
-      scope: constant.numeric
+      scope: invalid.deprecated.ltt
       push: 
         - match: '([#%])({)'
           captures:
             1: constant.numeric
             2: punctuation
           push: block  
-        - match: '"'
-          scope: constant.numeric
+        - match: '"!'
+          scope: invalid.deprecated
           pop: true
         - include: string         
         - match: '.'
-          scope: string
+          scope: invalid.deprecated
     - match: '(")([^"\n]*)(")(?![!])'
       captures:
         1: punctuation
@@ -141,227 +170,14 @@ contexts:
     - match: '({{name}})*\/'
       scope: comment
 
-
-
-
-
-      
 # ------------------xml definition part-----------------------
+
   xml:
-    - include: libretto
-    - match: '(<\?)\s*({{qualified_name}})'
-      captures:
-        1: punctuation.definition.tag.begin.xml
-        2: entity.name.tag.xml      
-      push:
-        # - meta_scope: meta.tag.preprocessor.xml
-        - match: \?>
-          scope: punctuation.definition.tag.end.xml
-          pop: true
-        - match: '\s+{{qualified_name}}(=)?'
-          captures:
-            1: entity.other.attribute-name.namespace.xml
-            2: entity.other.attribute-name.xml punctuation.separator.namespace.xml
-            #3: entity.other.attribute-name.localname.xml
-            4: punctuation.separator.key-value.xml
-        - include: double-quoted-string
-        - include: single-quoted-string
-    - match: '(<!)(DOCTYPE)(?:\s+({{name_xml}}))?'
-      captures:
-        1: punctuation.definition.tag.begin.xml
-        2: keyword.doctype.xml
-        3: variable.documentroot.xml
-      push:
-        - meta_scope: meta.tag.sgml.doctype.xml
-        - match: \s*(>)
-          captures:
-            1: punctuation.definition.tag.end.xml
-          pop: true
-        - include: internal-subset
-    - match: '<!--'
-      scope: punctuation.definition.comment.begin.xml
-      push:
-        - meta_scope: comment.block.xml
-        - match: '-->'
-          scope: punctuation.definition.comment.end.xml
-          pop: true
-    - match: '(</?){{qualified_name}}([^/>\s]*)'
-      captures:
-        1: punctuation.definition.tag.begin.xml
-        2: entity.name.tag.namespace.xml
-        3: entity.name.tag.xml punctuation.separator.namespace.xml
-        4: entity.name.tag.localname.xml
-        5: invalid.illegal.bad-tag-name.xml
-      push:
-        # - meta_scope: meta.tag.xml
-        - match: /?>
-          scope: punctuation.definition.tag.end.xml
-          pop: true
-        - include: tag-stuff
-    - match: '(</?)([[:digit:].-][[:alnum:]:_.-]*)'
-      captures:
-        1: punctuation.definition.tag.begin.xml
-        2: invalid.illegal.bad-tag-name.xml
-      push:
-        # - meta_scope: meta.tag.xml
-        - match: /?>
-          scope: punctuation.definition.tag.end.xml
-          pop: true
-        - include: tag-stuff
-    - include: entity
-    - match: '<!\[CDATA\['
-      scope: punctuation.definition.string.begin.xml
-      push:
-        - meta_scope: string.unquoted.cdata.xml
-        - match: ']]>'
-          scope: punctuation.definition.string.end.xml
-          pop: true
-    - include: should-be-entity
-
-
-  should-be-entity:
-    - match: '&'
-      scope: invalid.illegal.bad-ampersand.xml
-    - match: '<'
-      scope: invalid.illegal.missing-entity.xml
-    - match: '>'
-      scope: invalid.illegal.missing-entity.xml
-  double-quoted-string:
-    - match: '"'
-      scope: punctuation.definition.string.begin.xml
-      push:
-        - meta_scope: string.quoted.double.xml
-        - match: '"'
-          scope: punctuation.definition.string.end.xml
-          pop: true
-        - include: entity
-        - include: should-be-entity
-  entity:
-    - match: '(&)(?:{{name_xml}}|#[0-9]+|#x\h+)(;)'
-      scope: constant.character.entity.xml
-      captures:
-        1: punctuation.definition.constant.xml
-        2: punctuation.definition.constant.xml
-
-  libretto:
-    - match: '([#%])({)'
-      captures:
-        1: constant.numeric
-        2: punctuation
-      push:
-        - include: scope:source.ltt
-        - match: '}'
-          scope: punctuation
-          pop: true
-
-
-  internal-subset:
-    - match: \[
-      scope: punctuation.definition.constant.xml
-      push:
-        - meta_scope: meta.internalsubset.xml
-        - match: \]
-          pop: true
-        - include: entity-decl
-        - include: element-decl
-        - include: attlist-decl
-        - include: notation-decl
-        - include: parameter-entity
-  entity-decl:
-    - match: '(<!)(ENTITY)\s+(%\s+)?({{name_xml}})(\s+(?:SYSTEM|PUBLIC)\s+)?'
-      captures:
-        1: punctuation.definition.tag.begin.xml
-        2: keyword.entity.xml
-        3: punctuation.definition.entity.xml
-        4: variable.entity.xml
-        5: keyword.entitytype.xml
-      push:
-        - match: '>'
-          scope: punctuation.definition.tag.end.xml
-          pop: true
-        - include: double-quoted-string
-        - include: single-quoted-string
-  element-decl:
-    - match: '(<!)(ELEMENT)\s+({{name_xml}})\s+'
-      captures:
-        1: punctuation.definition.tag.begin.xml
-        2: keyword.element.xml
-        3: variable.element.xml
-      push:
-        - match: '>'
-          scope: punctuation.definition.tag.end.xml
-          pop: true
-        - match: '\b(EMPTY|ANY)\b'
-          scope: constant.other.xml
-        - include: element-parens
-  element-parens:
-    - match: \(
-      scope: punctuation.definition.group.xml
-      push:
-        - match: (\))([*?+])?
-          captures:
-            1: punctuation.definition.group.xml
-            2: keyword.operator.xml
-          pop: true
-        - match: '#PCDATA'
-          scope: constant.other.xml
-        - match: '[*?+]'
-          scope: keyword.operator.xml
-        - match: '[,|]'
-          scope: punctuation.separator.xml
-        - include: element-parens
-  attlist-decl:
-    - match: '(<!)(ATTLIST)\s+({{name_xml}})\s+({{name_xml}})'
-      captures:
-        1: punctuation.definition.tag.begin.xml
-        2: keyword.attlist.xml
-        3: variable.element.xml
-        4: variable.attribute-name.xml
-      push:
-        - match: '>'
-          scope: punctuation.definition.tag.end.xml
-          pop: true
-        - include: double-quoted-string
-        - include: single-quoted-string
-  notation-decl:
-    - match: '(<!)(NOTATION)\s+({{name_xml}})'
-      captures:
-        1: punctuation.definition.tag.begin.xml
-        2: keyword.notation.xml
-        3: variable.notation.xml
-      push:
-        - match: '>'
-          scope: punctuation.definition.tag.end.xml
-          pop: true
-        - include: double-quoted-string
-        - include: single-quoted-string
-  parameter-entity:
-    - match: '(%){{name_xml}}(;)'
-      scope: constant.character.parameter-entity.xml
-      captures:
-        1: punctuation.definition.constant.xml
-        2: punctuation.definition.constant.xml
-  single-quoted-string:
-    - match: "'"
-      scope: punctuation.definition.string.begin.xml
-      push:
-        - meta_scope: string.quoted.single.xml
-        - match: "'"
-          scope: punctuation.definition.string.end.xml
-          pop: true
-        - include: entity
-        - include: should-be-entity
-  tag-stuff:
-    - include: libretto
-    - match: '(?:\s+|^){{qualified_name}}\s*(=)'
-      captures:
-        1: entity.other.attribute-name.namespace.xml
-        2: entity.other.attribute-name.xml punctuation.separator.namespace.xml
-        3: entity.other.attribute-name.localname.xml
-        4: punctuation.separator.key-value.xml
-    - match: '(?:\s+|^)([[:alnum:]:_.-]+)\s*(=)'
-      captures:
-        1: invalid.illegal.bad-attribute-name.xml
-        2: punctuation.separator.key-value.xml
-    - include: double-quoted-string
-    - include: single-quoted-string
+    - match: (?=<)
+      push: "Packages/XML/XML.sublime-syntax"
+      with_prototype:
+        - match: "#{"
+          meta_scope: source.ltt
+          push: block
+        - match: (?<=>)
+          pop: true 

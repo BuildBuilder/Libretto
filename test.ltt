@@ -1,16 +1,23 @@
 def inc(x) = x+1
 
-def buildXml = 
-	<message>Hellow world!</message>
+def buildXml = {
+	<message test="123" test=#test> 123 + 321</message>
+}
 
 def buildXml(x) = x.
-	<message attr=#{ if($.?Real) "real" }>#{$}</message>
+	<message attr=#{if($.?Real) "real"}> #{
+		$
+	}</message>
 
 def buildXml(x:Int*) = x.
-	<message>#{inc($)}</message>
+	<message>
+	#{inc($)}
+	</message>
 
 
 def main = {
+	"${sdasd}"!
+	test: s"#{123}"
 	println: buildXml
 	println: buildXml(3.5)
 	println: buildXml("asd")
